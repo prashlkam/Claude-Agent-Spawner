@@ -1,0 +1,25 @@
+{
+  "name": "agent-spawner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Author Claude Agents in a guided editor; compile to an installable Claude Code plugin bundle.",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "workers/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@agent-spawner/web",
+    "build": "npm run build --workspace=@agent-spawner/web",
+    "start": "npm run start --workspace=@agent-spawner/web",
+    "db:push": "npm run db:push --workspace=@agent-spawner/web",
+    "db:studio": "npm run db:studio --workspace=@agent-spawner/web",
+    "test": "node --test --experimental-strip-types \"packages/**/test/*.test.ts\"",
+    "test:golden": "node --test --experimental-strip-types packages/compiler/test/golden.test.ts",
+    "golden:update": "UPDATE_GOLDEN=1 node --test --experimental-strip-types packages/compiler/test/golden.test.ts",
+    "typecheck": "tsc -b --pretty"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
