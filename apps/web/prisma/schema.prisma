@@ -1,0 +1,159 @@
+// Agent Spawner data model (PLAN §6.3).
+//
+// Provider note: this ships on SQLite so the app runs with no external services. Switching to
+// Postgres is a two-line change — set `provider = "postgresql"` and point DATABASE_URL at it.
+// The spec is deliberately stored as a single serialised JSON document rather than shredded
+// across tables: the schema churns heavily early on, and a `specVersion` migrator over one
+// column is far cheaper than eight relational migrations per change.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String   @default("")
+  avatarUrl String   @default("")
+  createdAt DateTime @default(now())
+
+  agents        Agent[]
+  skillLibrary  SkillLibraryItem[]
+  installations GitHubInstallation[]
+}
+
+model Agent {
+  id          String   @id @default(cuid())
+  userId      String
+  slug        String
+  title       String
+  /// Serialised AgentSpec.
+  spec        String
+  /// Optimistic concurrency token; a stale write is rejected with a 409.
+  revision    Int      @default(1)
+  specVersion Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions        AgentVersion[]
+  knowledgeFiles  KnowledgeFile[]
+  validationRuns  ValidationRun[]
+  deployments     Deployment[]
+
+  @@unique([userId, slug])
+  @@index([userId])
+}
+
+/// Every save appends one of these: free undo history and diffing.
+model AgentVersion {
+  id        String   @id @default(cuid())
+  agentId   String
+  revision  Int
+  spec      String
+  label     String   @default("")
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, revision])
+  @@index([agentId])
+}
+
+/// Bytes live in object storage; only metadata is in the database.
+model KnowledgeFile {
+  id         String   @id @default(cuid())
+  agentId    String
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  storageKey String
+  checksum   String   @default("")
+  createdAt  DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+model SkillLibraryItem {
+  id          String   @id @default(cuid())
+  userId      String?
+  /// Nullable from day one so team libraries can be added without a retrofit (PLAN §14.2).
+  orgId       String?
+  name        String
+  description String   @default("")
+  body        String   @default("")
+  /// Serialised supporting files.
+  files       String   @default("[]")
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ConnectorTemplate {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  displayName String
+  description String  @default("")
+  transport   String  @default("stdio")
+  command     String  @default("")
+  /// Serialised string[].
+  args        String  @default("[]")
+  url         String  @default("")
+  /// Serialised EnvVar[].
+  envSchema   String  @default("[]")
+  docsUrl     String  @default("")
+}
+
+model ValidationRun {
+  id          String   @id @default(cuid())
+  agentId     String
+  status      String   @default("queued")
+  /// Serialised Diagnostic[].
+  diagnostics String   @default("[]")
+  cliOutput   String   @default("")
+  createdAt   DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+model Deployment {
+  id           String   @id @default(cuid())
+  agentId      String
+  target       String   @default("github")
+  repoFullName String
+  branch       String
+  commitSha    String   @default("")
+  status       String   @default("queued")
+  logs         String   @default("")
+  createdAt    DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+/// Only the installation id is stored. Access tokens are minted per operation and never
+/// persisted — see PLAN §10.
+model GitHubInstallation {
+  id             String   @id @default(cuid())
+  userId         String
+  installationId String
+  accountLogin   String
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, installationId])
+}

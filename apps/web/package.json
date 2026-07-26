@@ -1,0 +1,36 @@
+{
+  "name": "@agent-spawner/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "prisma generate && next build",
+    "start": "next start --port 3000",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@agent-spawner/compiler": "*",
+    "@agent-spawner/decompiler": "*",
+    "@agent-spawner/spec": "*",
+    "@anthropic-ai/sdk": "^0.69.0",
+    "@prisma/client": "^6.19.0",
+    "archiver": "^7.0.1",
+    "next": "^16.2.12",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.1.12",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.14",
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^4.1.14",
+    "typescript": "^5.9.3"
+  }
+}
